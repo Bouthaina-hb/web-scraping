@@ -1,0 +1,29 @@
+import scrapy
+from ..items import LipnItem
+
+
+class LipnSpider(scrapy.Spider):
+    name = 'lipn'
+    allowed_domains = ['lipn.fr']
+    start_urls = [
+        'https://lipn.univ-paris13.fr/'
+    ]
+
+    def parse(self, response):
+        items = LipnItem()
+        urls = response.xpath('//a/@href').getall()
+        other_urls = response.xpath('//script/@src').getall()
+
+        all_urls = urls + other_urls
+        all_urls = list(dict.fromkeys(all_urls)) # removing duplicates
+
+        items['start_url'] = response.request.meta['redirect_urls'][0]
+
+        for url in all_urls:
+            if not url.startswith('#'):
+                items['url'] = url
+                yield items
+
+        for url in all_urls:
+            if url.startswith('https://lipn.univ-paris13.fr/'):
+                yield response.follow(url, callback=self.parse)
